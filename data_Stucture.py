@@ -1,3 +1,5 @@
+from tkinter import messagebox
+
 class bookNode:
     def __init__(self, book_id, name, author, year):
         self.book_id = book_id
@@ -11,6 +13,8 @@ class bookNode:
 class BookLibrary:
     def __init__(self):
         self.root = None
+        self.filename = "library_data.txt"
+        self.load_books_from_file()
 
     def _insert(self, node, book_id, name, author, year):
         if node is None:
@@ -29,6 +33,7 @@ class BookLibrary:
             raise ValueError("A book with the same name and author already exists.")
 
         self.root = self._insert(self.root, book_id, name, author, year)
+        self.save_books_to_file()
 
     def _check_duplicate_name_author(self, node, name, author):
         if node is None:
@@ -76,7 +81,10 @@ class BookLibrary:
         return node
 
     def delete(self, book_id):
+        if not self.search(book_id):
+            raise ValueError("Book ID not found.")
         self.root = self._delete(self.root, book_id)
+        self.save_books_to_file()
 
     def _inorder(self, node, books):
         if node:
@@ -88,12 +96,32 @@ class BookLibrary:
         books = []
         self._inorder(self.root, books)
         if sort_by == "name":
-            books.sort(key=lambda x: x.name)
+            books.sort(key=lambda x: x.name.lower())
             header = "Sorted by: Book Name\n\n"
         else:
             books.sort(key=lambda x: x.book_id)
             header = "Sorted by: Book ID\n\n"
-        return header +"".join(
+        return header + "".join(
             f"ID: {b.book_id}, Book: {b.name}, Author: {b.author}, Year: {b.year}\n"
             for b in books
         )
+
+    def save_books_to_file(self):
+        books = []
+        self._inorder(self.root, books)
+        with open(self.filename, "w") as f:
+            for b in books:
+                f.write(f"{b.book_id},{b.name},{b.author},{b.year}\n")
+
+    def load_books_from_file(self):
+        try:
+            with open(self.filename, "r") as f:
+                for line in f:
+                    parts = line.strip().split(",")
+                    if len(parts) == 4:
+                        book_id, name, author, year = parts
+                        self.root = self._insert(self.root, int(book_id), name, author, int(year))
+        except FileNotFoundError:
+            messagebox.showerror("File Not Found", "The books.txt file was not found.")
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {str(e)}")
